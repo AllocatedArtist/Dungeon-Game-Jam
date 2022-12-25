@@ -133,6 +133,7 @@ pub enum EditorMode {
 
 pub struct TileMapEditor {
     sample_x: f32,
+    show_edit_window: bool,
     sample_y: f32,
     filename: String,
     h_slice: f32,
@@ -224,6 +225,7 @@ impl TileMapEditor {
         TileMapEditor {
             sample_x,
             sample_y,
+            show_edit_window: true,
             filename: String::new(),
             map_width_slider: 10.0,
             map_height_slider: 10.0,
@@ -298,15 +300,28 @@ impl TileMapEditor {
     pub fn show_editors(&mut self) {
         match self.editor_mode {
             EditorMode::None => {
+                self.show_edit_window = true;
                 self.can_paint = false;
             }
             EditorMode::Paint => {
                 if self.can_edit() {
                     self.edit_tiles();
                 }
-                self.draw();
+
+                if is_key_pressed(KeyCode::E) {
+                    self.can_paint = !self.can_paint;
+                }
+
+                if is_key_pressed(KeyCode::Q) {
+                    self.show_edit_window = !self.show_edit_window;
+                }
+
+                if self.show_edit_window {
+                    self.draw();
+                }
             }
             EditorMode::Save => {
+                self.show_edit_window = true;
                 self.can_paint = false;
                 self.serialization_editor();
             }

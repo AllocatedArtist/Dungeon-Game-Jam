@@ -31,6 +31,9 @@ async fn main() {
     loop {
         clear_background(LIGHTGRAY);
 
+        editor.editor_camera.update_camera();
+        draw_map(&mut editor.tiles, tilemap);
+
         if is_key_pressed(KeyCode::F1) {
             editor.switch_mode(EditorMode::None);
         }
@@ -41,12 +44,8 @@ async fn main() {
             editor.switch_mode(EditorMode::Save);
         }
 
-        editor.editor_camera.update_camera();
-
         player.draw();
         player.move_player();
-
-        draw_map(&mut editor.tiles, tilemap);
 
         set_default_camera();
 
