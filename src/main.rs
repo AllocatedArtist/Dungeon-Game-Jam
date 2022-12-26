@@ -30,24 +30,35 @@ async fn main() {
 
     let mut debug_collision = true;
 
+    let mut use_editor = true;
+
+    let mut player_cam = Camera2D::from_display_rect(Rect::new(0.0, 0.0, 600.0, 600.0));
+
     loop {
         clear_background(LIGHTGRAY);
 
-        if is_key_pressed(KeyCode::Y) && is_key_down(KeyCode::RightControl) {
+        if is_key_pressed(KeyCode::Tab) && is_key_down(KeyCode::LeftControl) {
             player.spawn_player(&editor.tiles);
+            use_editor = !use_editor;
         }
 
-        editor.editor_camera.update_camera();
+        if use_editor {
+            editor.editor_camera.update_camera();
 
-        if is_key_pressed(KeyCode::F1) {
-            editor.switch_mode(EditorMode::None);
-        }
-        if is_key_pressed(KeyCode::F2) {
-            editor.switch_mode(EditorMode::Paint);
-        }
+            if is_key_pressed(KeyCode::F1) {
+                editor.switch_mode(EditorMode::None);
+            }
+            if is_key_pressed(KeyCode::F2) {
+                editor.switch_mode(EditorMode::Paint);
+            }
 
-        if is_key_pressed(KeyCode::F4) {
-            debug_collision = !debug_collision;
+            if is_key_pressed(KeyCode::F4) {
+                debug_collision = !debug_collision;
+            }
+        } else {
+            player_cam.target = player_cam.target.lerp(player.pos(), 0.1);
+            player_cam.target = player_cam.target.round();
+            set_camera(&player_cam);
         }
 
         draw_map(&mut editor.tiles, tilemap, debug_collision);
@@ -57,7 +68,9 @@ async fn main() {
 
         set_default_camera();
 
-        editor.show_editors();
+        if use_editor {
+            editor.show_editors();
+        }
 
         next_frame().await
     }
