@@ -479,6 +479,7 @@ impl TileMapEditor {
                     self.map_height_slider = self.map_height_slider.round();
 
                     if ui.button(Vec2::new(0.0, 290.0), "Update Map (Resets all tiles)") {
+                        self.spawn_set = false;
                         self.map_size =
                             (self.map_width_slider as i32, self.map_height_slider as i32);
                         self.tiles = create_new_map(self.padding, self.map_size.0, self.map_size.1);
@@ -535,6 +536,12 @@ impl TileMapEditor {
                 }
                 if ui.button(Vec2::new(70.0, 50.0), "Load") && !self.filename.is_empty() {
                     self.tiles = load(&self.filename).unwrap();
+
+                    for tile in self.tiles.iter() {
+                        if let TileType::PlayerSpawn(_) = tile.tile_type {
+                            self.spawn_set = false;
+                        }
+                    }
                 }
             });
     }
@@ -696,7 +703,7 @@ pub struct LoadedTile {
 }
 
 pub fn load(path: &str) -> JsonResult<Vec<Tile>> {
-    let extended_path = format!("{}.json", path);
+    let extended_path = format!("res/levels/{}.json", path);
 
     let contents = match std::fs::read_to_string(extended_path) {
         Ok(file) => file,

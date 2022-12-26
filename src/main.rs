@@ -16,7 +16,7 @@ async fn main() {
             }),
     );
 
-    let tilemap = create_texture("res/levels/tilemap_packed.png")
+    let tilemap = create_texture("res/textures/tilemap_packed.png")
         .await
         .unwrap_or_else(|err| {
             println!("{err}");
@@ -63,8 +63,10 @@ async fn main() {
 
         draw_map(&mut editor.tiles, tilemap, debug_collision);
 
-        player.draw();
-        player.move_player(&editor.tiles);
+        if !use_editor {
+            player.draw();
+            player.move_player(&editor.tiles);
+        }
 
         set_default_camera();
 
