@@ -65,7 +65,7 @@ impl Player {
         self.texture.set_filter(FilterMode::Nearest);
     }
 
-    pub fn move_player(&mut self) {
+    pub fn move_player(&mut self, tiles: &Vec<Tile>) {
         let mut velocity = Vec2::ZERO;
         if is_key_down(input::KeyCode::W) {
             velocity.y -= 1.0;
@@ -80,7 +80,48 @@ impl Player {
             velocity.x += 1.0;
         }
 
-        self.pos += velocity.normalize_or_zero() * self.speed * get_frame_time();
+        let get_tile = |x: f32, y: f32| {
+            let result_x = ((x + 15.0) as i32 / 32) * 32;
+            let result_y = ((y + 15.0) as i32 / 32) * 32;
+
+            for tile in tiles.iter() {
+                if tile.pos() == vec2(result_x as f32, result_y as f32) {
+                    if let TileType::Wall(_) = tile.tile_type {
+                        return true;
+                    }
+                }
+            }
+
+            false
+        };
+
+        let mut new_pos = self.pos + velocity.normalize_or_zero() * self.speed * get_frame_time();
+
+        if velocity.x <= 0.0 {
+            if get_tile(new_pos.x - 15.0, self.pos.y) {
+                new_pos.x = self.pos.x;
+                velocity.x = 0.0;
+            }
+        } else {
+            if get_tile(new_pos.x + 15.0, self.pos.y) {
+                new_pos.x = self.pos.x;
+                velocity.x = 0.0;
+            }
+        }
+
+        if velocity.y <= 0.0 {
+            if get_tile(self.pos.x, new_pos.y - 15.0) {
+                new_pos.y = self.pos.y;
+                velocity.y = 0.0;
+            }
+        } else {
+            if get_tile(self.pos.x, new_pos.y + 15.0) {
+                new_pos.y = self.pos.y;
+                velocity.y = 0.0;
+            }
+        }
+
+        self.pos = new_pos;
     }
 }
 
@@ -128,7 +169,6 @@ fn create_new_map(padding: (f32, f32), map_width: i32, map_height: i32) -> Vec<T
 pub enum EditorMode {
     None,
     Paint,
-    Save,
 }
 
 pub struct TileMapEditor {
@@ -186,6 +226,11 @@ impl Tile {
     }
     pub fn pos(&self) -> Vec2 {
         self.pos
+    }
+
+    pub fn reset(&mut self) {
+        self.tile_type = TileType::Empty(0);
+        self.source = Rect::new(0.0, 0.0, 0.0, 0.0);
     }
 }
 
@@ -283,9 +328,8 @@ impl TileMapEditor {
             let grid = self.current_rect();
             for tile in self.tiles.iter_mut() {
                 if tile.pos == pos {
-                    tile.source = grid;
-
                     tile.tile_type = if !self.is_collision_paint {
+                        tile.source = grid;
                         TileType::Floor(1)
                     } else {
                         TileType::Wall(2)
@@ -325,18 +369,19 @@ impl TileMapEditor {
                     self.edit_tiles();
                 }
 
-                if is_key_pressed(KeyCode::E) {
+                if is_key_pressed(KeyCode::E) && is_key_down(KeyCode::LeftControl) {
                     self.can_paint = !self.can_paint;
                     if self.can_paint == false {
                         self.is_collision_paint = false;
                     }
                 }
 
-                if is_key_pressed(KeyCode::Q) {
+                if is_key_pressed(KeyCode::Q) && is_key_down(KeyCode::LeftControl) {
                     self.show_edit_window = !self.show_edit_window;
                 }
 
                 if self.show_edit_window {
+                    self.serialization_editor();
                     self.draw();
                 }
 
@@ -346,12 +391,11 @@ impl TileMapEditor {
                         draw_text("Collision Paint", 0.0, 40.0, 16.0, YELLOW);
                     }
                 }
-            }
-            EditorMode::Save => {
-                self.is_collision_paint = false;
-                self.show_edit_window = true;
-                self.can_paint = false;
-                self.serialization_editor();
+
+                if is_key_pressed(KeyCode::R) && is_key_down(KeyCode::LeftControl) {
+                    self.is_collision_paint = false;
+                    self.can_paint = false;
+                }
             }
         }
     }
@@ -446,7 +490,7 @@ impl TileMapEditor {
     }
 
     pub fn serialization_editor(&mut self) {
-        ui::widgets::Window::new(hash!(10), vec2(100.0, 0.0), vec2(300.0, 300.0))
+        ui::widgets::Window::new(hash!(), vec2(100.0, 0.0), vec2(300.0, 300.0))
             .label("Save/Load")
             .titlebar(true)
             .ui(&mut *root_ui(), |ui| {

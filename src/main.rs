@@ -28,7 +28,7 @@ async fn main() {
     let mut editor = TileMapEditor::new(0.0, 0.0, 1.0, 1.0, 16.0, (10, 10), (1.0, 1.0));
     editor.set_texture(tilemap.clone());
 
-    let mut debug_collision = false;
+    let mut debug_collision = true;
 
     loop {
         clear_background(LIGHTGRAY);
@@ -41,9 +41,6 @@ async fn main() {
         if is_key_pressed(KeyCode::F2) {
             editor.switch_mode(EditorMode::Paint);
         }
-        if is_key_pressed(KeyCode::F3) {
-            editor.switch_mode(EditorMode::Save);
-        }
 
         if is_key_pressed(KeyCode::F4) {
             debug_collision = !debug_collision;
@@ -52,9 +49,10 @@ async fn main() {
         draw_map(&mut editor.tiles, tilemap, debug_collision);
 
         player.draw();
-        player.move_player();
+        player.move_player(&editor.tiles);
 
         set_default_camera();
+
         editor.show_editors();
 
         next_frame().await
