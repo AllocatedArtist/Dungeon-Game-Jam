@@ -60,6 +60,15 @@ impl Player {
         );
     }
 
+    pub fn spawn_player(&mut self, tiles: &Vec<Tile>) {
+        for tile in tiles.iter() {
+            if let TileType::PlayerSpawn(_) = tile.tile_type {
+                self.pos = tile.pos;
+                break;
+            }
+        }
+    }
+
     pub fn set_texture(&mut self, texture: Texture2D) {
         self.texture = texture;
         self.texture.set_filter(FilterMode::Nearest);
@@ -181,6 +190,7 @@ pub struct TileMapEditor {
     v_slice: f32,
     tile_scale: f32,
     map_width_slider: f32,
+    spawn_set: bool,
     map_height_slider: f32,
     tilemap_source: Texture2D,
     pub editor_camera: EditorCamera,
@@ -196,6 +206,7 @@ pub enum TileType {
     Empty(i32),
     Floor(i32),
     Wall(i32),
+    PlayerSpawn(i32),
 }
 
 pub struct Tile {
@@ -270,6 +281,7 @@ impl TileMapEditor {
         padding: (f32, f32),
     ) -> TileMapEditor {
         TileMapEditor {
+            spawn_set: false,
             sample_x,
             sample_y,
             is_collision_paint: false,
@@ -355,6 +367,26 @@ impl TileMapEditor {
                 }
             }
         }
+
+        if is_key_pressed(KeyCode::P) && is_key_down(KeyCode::LeftControl) && !self.spawn_set {
+            let pos = self.mouse_to_grid();
+
+            for tile in self.tiles.iter_mut() {
+                if tile.pos == pos {
+                    self.spawn_set = true;
+                    tile.tile_type = TileType::PlayerSpawn(3);
+                }
+            }
+        }
+
+        if is_key_pressed(KeyCode::R) && is_key_down(KeyCode::LeftControl) && self.spawn_set {
+            for tile in self.tiles.iter_mut() {
+                if let TileType::PlayerSpawn(_) = tile.tile_type {
+                    self.spawn_set = false;
+                    tile.tile_type = TileType::Floor(1);
+                }
+            }
+        }
     }
 
     pub fn show_editors(&mut self) {
@@ -392,7 +424,7 @@ impl TileMapEditor {
                     }
                 }
 
-                if is_key_pressed(KeyCode::R) && is_key_down(KeyCode::LeftControl) {
+                if is_key_pressed(KeyCode::F3) {
                     self.is_collision_paint = false;
                     self.can_paint = false;
                 }
@@ -573,6 +605,9 @@ impl Serialize for TileType {
             TileType::Wall(num) => {
                 serializer.serialize_newtype_variant("TileType", 2, "Wall", &num)
             }
+            TileType::PlayerSpawn(num) => {
+                serializer.serialize_newtype_variant("TileType", 3, "PlayerSpawn", &num)
+            }
         }
     }
 }
@@ -735,6 +770,28 @@ pub fn draw_map(tiles: &mut Vec<Tile>, tilemap: Texture2D, debug_collider: bool)
             TileType::Wall(_) => {
                 if debug_collider {
                     draw_rectangle_lines(tile.pos.x, tile.pos.y, 32.0, 32.0, 1.0, BLUE);
+                } else {
+                    draw_texture_ex(
+                        tilemap,
+                        tile.pos.x,
+                        tile.pos.y,
+                        WHITE,
+                        DrawTextureParams {
+                            dest_size: Option::Some(Vec2::new(32.0, 32.0)),
+                            source: Option::Some(Rect::new(
+                                tile.source.x,
+                                tile.source.y,
+                                tile.source.w,
+                                tile.source.h,
+                            )),
+                            ..Default::default()
+                        },
+                    );
+                }
+            }
+            TileType::PlayerSpawn(_) => {
+                if debug_collider {
+                    draw_rectangle(tile.pos.x, tile.pos.y, 32.0, 32.0, BLACK);
                 } else {
                     draw_texture_ex(
                         tilemap,

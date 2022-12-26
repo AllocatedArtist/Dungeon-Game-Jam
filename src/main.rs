@@ -33,6 +33,10 @@ async fn main() {
     loop {
         clear_background(LIGHTGRAY);
 
+        if is_key_pressed(KeyCode::Y) && is_key_down(KeyCode::RightControl) {
+            player.spawn_player(&editor.tiles);
+        }
+
         editor.editor_camera.update_camera();
 
         if is_key_pressed(KeyCode::F1) {
