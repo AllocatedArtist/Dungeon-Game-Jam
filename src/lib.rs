@@ -243,6 +243,10 @@ impl Tile {
         self.tile_type = TileType::Empty(0);
         self.source = Rect::new(0.0, 0.0, 0.0, 0.0);
     }
+
+    pub fn tile_type(&self) -> TileType {
+        self.tile_type
+    }
 }
 
 pub fn sub_image_valid(texture: &Texture2D, rect: Rect) -> bool {
