@@ -134,6 +134,7 @@ pub enum EditorMode {
 pub struct TileMapEditor {
     sample_x: f32,
     show_edit_window: bool,
+    is_collision_paint: bool,
     sample_y: f32,
     filename: String,
     h_slice: f32,
@@ -154,6 +155,7 @@ pub struct TileMapEditor {
 pub enum TileType {
     Empty(i32),
     Floor(i32),
+    Wall(i32),
 }
 
 pub struct Tile {
@@ -225,6 +227,7 @@ impl TileMapEditor {
         TileMapEditor {
             sample_x,
             sample_y,
+            is_collision_paint: false,
             show_edit_window: true,
             filename: String::new(),
             map_width_slider: 10.0,
@@ -281,9 +284,18 @@ impl TileMapEditor {
             for tile in self.tiles.iter_mut() {
                 if tile.pos == pos {
                     tile.source = grid;
-                    tile.tile_type = TileType::Floor(1);
+
+                    tile.tile_type = if !self.is_collision_paint {
+                        TileType::Floor(1)
+                    } else {
+                        TileType::Wall(2)
+                    };
                 }
             }
+        }
+
+        if is_key_pressed(KeyCode::C) {
+            self.is_collision_paint = !self.is_collision_paint;
         }
 
         if is_mouse_button_down(MouseButton::Right) {
@@ -291,7 +303,11 @@ impl TileMapEditor {
 
             for tile in self.tiles.iter_mut() {
                 if tile.pos == pos {
-                    tile.tile_type = TileType::Empty(0);
+                    tile.tile_type = if !self.is_collision_paint {
+                        TileType::Empty(0)
+                    } else {
+                        TileType::Floor(1)
+                    };
                 }
             }
         }
@@ -301,6 +317,7 @@ impl TileMapEditor {
         match self.editor_mode {
             EditorMode::None => {
                 self.show_edit_window = true;
+                self.is_collision_paint = false;
                 self.can_paint = false;
             }
             EditorMode::Paint => {
@@ -310,6 +327,9 @@ impl TileMapEditor {
 
                 if is_key_pressed(KeyCode::E) {
                     self.can_paint = !self.can_paint;
+                    if self.can_paint == false {
+                        self.is_collision_paint = false;
+                    }
                 }
 
                 if is_key_pressed(KeyCode::Q) {
@@ -319,8 +339,16 @@ impl TileMapEditor {
                 if self.show_edit_window {
                     self.draw();
                 }
+
+                if self.can_edit() {
+                    draw_text("Edit Mode", 0.0, 20.0, 16.0, RED);
+                    if self.is_collision_paint {
+                        draw_text("Collision Paint", 0.0, 40.0, 16.0, YELLOW);
+                    }
+                }
             }
             EditorMode::Save => {
+                self.is_collision_paint = false;
                 self.show_edit_window = true;
                 self.can_paint = false;
                 self.serialization_editor();
@@ -418,8 +446,9 @@ impl TileMapEditor {
     }
 
     pub fn serialization_editor(&mut self) {
-        ui::widgets::Window::new(hash!(), Vec2::new(100.0, 0.0), Vec2::new(300.0, 300.0))
+        ui::widgets::Window::new(hash!(10), vec2(100.0, 0.0), vec2(300.0, 300.0))
             .label("Save/Load")
+            .titlebar(true)
             .ui(&mut *root_ui(), |ui| {
                 ui.input_text(hash!(), "Filename", &mut self.filename);
                 if ui.button(Vec2::new(25.0, 50.0), "Save") && !self.filename.is_empty() {
@@ -496,6 +525,9 @@ impl Serialize for TileType {
             }
             TileType::Floor(num) => {
                 serializer.serialize_newtype_variant("TileType", 1, "Floor", &num)
+            }
+            TileType::Wall(num) => {
+                serializer.serialize_newtype_variant("TileType", 2, "Wall", &num)
             }
         }
     }
@@ -632,7 +664,7 @@ pub fn load(path: &str) -> JsonResult<Vec<Tile>> {
     Ok(converted_tiles)
 }
 
-pub fn draw_map(tiles: &mut Vec<Tile>, tilemap: Texture2D) {
+pub fn draw_map(tiles: &mut Vec<Tile>, tilemap: Texture2D, debug_collider: bool) {
     for tile in tiles.iter() {
         match tile.tile_type {
             TileType::Empty(_) => {
@@ -655,6 +687,28 @@ pub fn draw_map(tiles: &mut Vec<Tile>, tilemap: Texture2D) {
                         ..Default::default()
                     },
                 );
+            }
+            TileType::Wall(_) => {
+                if debug_collider {
+                    draw_rectangle_lines(tile.pos.x, tile.pos.y, 32.0, 32.0, 1.0, BLUE);
+                } else {
+                    draw_texture_ex(
+                        tilemap,
+                        tile.pos.x,
+                        tile.pos.y,
+                        WHITE,
+                        DrawTextureParams {
+                            dest_size: Option::Some(Vec2::new(32.0, 32.0)),
+                            source: Option::Some(Rect::new(
+                                tile.source.x,
+                                tile.source.y,
+                                tile.source.w,
+                                tile.source.h,
+                            )),
+                            ..Default::default()
+                        },
+                    );
+                }
             }
         }
     }
