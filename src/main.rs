@@ -2,6 +2,7 @@ use macroquad::prelude::*;
 use std::process;
 
 use dungeon_game::*;
+use dungeon_game::{editor::tilemap_editor::*, player::player::*, tile::tile::*, utility::*};
 
 #[macroquad::main(setup_window)]
 async fn main() {
