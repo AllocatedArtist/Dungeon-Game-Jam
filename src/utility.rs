@@ -21,6 +21,8 @@ pub async fn create_texture(path: &str) -> Result<Texture2D, String> {
         }
     };
 
+    texture.set_filter(FilterMode::Nearest);
+
     Ok(texture)
 }
 
@@ -133,6 +135,31 @@ pub fn draw_map(tiles: &mut Vec<Tile>, tilemap: Texture2D, debug_collider: bool)
                             ..Default::default()
                         },
                     );
+                }
+            }
+        }
+    }
+}
+
+pub fn spawn_enemy(
+    tiles: &Vec<Tile>,
+    enemies: &mut Vec<Vec2>,
+    player_pos: Vec2,
+    enemy_count: usize,
+) {
+    const FACTOR: f32 = 32.0 * 5.0;
+
+    for tile in tiles.iter() {
+        if let TileType::Floor(_) = tile.tile_type() {
+            if rand::gen_range(0.0, 5.0) < 1.0 {
+                if tile.pos().x > player_pos.x + FACTOR
+                    || tile.pos().x < player_pos.x - FACTOR
+                    || tile.pos().y > player_pos.y + FACTOR
+                    || tile.pos().y < player_pos.y - FACTOR
+                {
+                    if enemies.len() < enemy_count {
+                        enemies.push(tile.pos());
+                    }
                 }
             }
         }
