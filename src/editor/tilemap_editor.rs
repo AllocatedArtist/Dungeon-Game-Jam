@@ -1,6 +1,6 @@
 use crate::editor::editor_camera::*;
-use crate::serialization::serialization::*;
-use crate::tile::tile::*;
+use crate::serialization::*;
+use crate::tile::*;
 use crate::utility::*;
 use macroquad::{hash, prelude::*, ui, ui::root_ui};
 

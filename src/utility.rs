@@ -1,4 +1,4 @@
-use crate::tile::tile::*;
+use crate::tile::*;
 use macroquad::prelude::*;
 
 pub async fn create_texture(path: &str) -> Result<Texture2D, String> {

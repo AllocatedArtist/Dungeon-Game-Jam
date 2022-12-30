@@ -1,4 +1,4 @@
-use dungeon_game::{editor::tilemap_editor::*, player::player::*, utility::*};
+use dungeon_game::{editor::tilemap_editor::*, player::*, utility::*};
 use macroquad::prelude::*;
 use std::process;
 
