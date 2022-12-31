@@ -56,3 +56,25 @@ impl Tile {
         self.tile_type = tile_type;
     }
 }
+
+pub fn get_tile(x: f32, y: f32, tiles: &Vec<Tile>) -> bool {
+    let result_x = ((x + 15.0) as i32 / 32) * 32;
+    let result_y = ((y + 15.0) as i32 / 32) * 32;
+
+    for tile in tiles.iter() {
+        if tile.pos() == vec2(result_x as f32, result_y as f32) {
+            if let TileType::Wall(_) = tile.tile_type() {
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
+pub fn calculate_tile_pos(x: f32, y: f32) -> Vec2 {
+    let result_x = (x as i32 / 32) * 32;
+    let result_y = (y as i32 / 32) * 32;
+
+    vec2(result_x as f32, result_y as f32)
+}

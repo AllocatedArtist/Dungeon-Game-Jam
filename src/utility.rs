@@ -1,3 +1,4 @@
+use crate::enemy::*;
 use crate::tile::*;
 use macroquad::prelude::*;
 
@@ -143,7 +144,7 @@ pub fn draw_map(tiles: &mut Vec<Tile>, tilemap: Texture2D, debug_collider: bool)
 
 pub fn spawn_enemy(
     tiles: &Vec<Tile>,
-    enemies: &mut Vec<Vec2>,
+    enemies: &mut Vec<Enemy>,
     player_pos: Vec2,
     enemy_count: usize,
 ) {
@@ -158,7 +159,7 @@ pub fn spawn_enemy(
                     || tile.pos().y < player_pos.y - FACTOR
                 {
                     if enemies.len() < enemy_count {
-                        enemies.push(tile.pos());
+                        enemies.push(Enemy::new(tile.pos()));
                     }
                 }
             }

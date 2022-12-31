@@ -1,6 +1,8 @@
-use dungeon_game::{editor::tilemap_editor::*, player::*, utility::*};
+use dungeon_game::{editor::tilemap_editor::*, enemy::*, player::*, utility::*};
 use macroquad::prelude::*;
 use std::process;
+
+use std::collections::VecDeque;
 
 pub enum GameState {
     EditorMode,
@@ -11,11 +13,12 @@ pub struct Game {
     game_state: GameState,
     game_camera: Camera2D,
     debug_collision: bool,
-    enemies: Vec<Vec2>,
+    enemies: Vec<Enemy>,
     player: Player,
     enemy_sprite_a: Texture2D,
     level_atlas: Texture2D,
     editor: TileMapEditor,
+    debug_path: VecDeque<Vec2>,
 }
 
 impl Game {
@@ -59,6 +62,7 @@ impl Game {
             level_atlas,
             game_camera: player_cam,
             editor,
+            debug_path: VecDeque::new(),
         }
     }
 
@@ -112,17 +116,15 @@ impl Game {
                     self.debug_collision,
                 );
 
-                for enemy in &self.enemies {
-                    draw_texture_ex(
-                        self.enemy_sprite_a,
-                        enemy.x,
-                        enemy.y,
-                        WHITE,
-                        DrawTextureParams {
-                            dest_size: Some(Vec2::new(32.0, 32.0)),
-                            ..Default::default()
-                        },
-                    )
+                for grid in self.debug_path.iter() {
+                    draw_rectangle(grid.x, grid.y, 32.0, 32.0, YELLOW);
+                }
+
+                for enemy in self.enemies.iter_mut() {
+                    self.debug_path = enemy.path();
+
+                    enemy.move_to(self.player.pos(), &self.editor.tiles);
+                    enemy.draw(self.enemy_sprite_a);
                 }
 
                 self.player.draw();

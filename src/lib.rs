@@ -4,6 +4,7 @@ use macroquad::prelude::*;
 extern crate serde_derive;
 
 pub mod editor;
+pub mod enemy;
 pub mod player;
 pub mod serialization;
 pub mod tile;
