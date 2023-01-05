@@ -3,7 +3,10 @@ use macroquad::prelude::*;
 
 use std::collections::VecDeque;
 
+#[derive(Clone)]
 pub struct Enemy {
+    speed: f32,
+    player_spotted: bool,
     move_pos: Vec2,
     prev_goal: Vec2,
     path: VecDeque<Vec2>,
@@ -11,12 +14,26 @@ pub struct Enemy {
 }
 
 impl Enemy {
+    pub fn set_pos(&mut self, pos: Vec2) {
+        self.pos = pos;
+    }
+
     pub fn path(&self) -> VecDeque<Vec2> {
         self.path.clone()
     }
 
+    pub fn player_spotted(&self) -> bool {
+        self.player_spotted
+    }
+
+    pub fn set_player_spotted(&mut self, spotted: bool) {
+        self.player_spotted = spotted
+    }
+
     pub fn new(pos: Vec2) -> Enemy {
         Enemy {
+            speed: rand::gen_range(80.0, 105.0),
+            player_spotted: false,
             move_pos: Vec2::ZERO,
             pos,
             prev_goal: Vec2::ZERO,
@@ -41,25 +58,39 @@ impl Enemy {
         );
     }
 
+    pub fn displace(&mut self, other: &Enemy) {
+        if other.pos.distance(self.pos) < 20.0 {
+            let dir = (other.pos() - self.pos()).normalize_or_zero();
+            self.pos += -dir * 10.0 * get_frame_time();
+        }
+    }
+
     pub fn move_to(&mut self, new_pos: Vec2, tiles: &Vec<Tile>) {
-        self.prev_goal = new_pos;
-        self.path = breadth_first_search(
-            calculate_tile_pos(self.pos.x, self.pos.y),
-            calculate_tile_pos(new_pos.x, new_pos.y),
-            tiles,
-        );
-        self.move_pos = self.path.pop_front().unwrap_or(new_pos);
+        if self.pos.distance(new_pos) > 100.0 {
+            self.prev_goal = new_pos;
+
+            self.path = breadth_first_search(
+                calculate_tile_pos(self.pos.x, self.pos.y),
+                calculate_tile_pos(new_pos.x, new_pos.y),
+                tiles,
+            );
+
+            self.move_pos = self.path.pop_front().unwrap_or(new_pos);
+            self.move_pos = self.move_pos.round();
+        } else {
+            self.path.clear();
+            self.move_pos = new_pos;
+        }
 
         if self.pos.distance(new_pos) > 50.0 {
             if self.pos.distance(self.move_pos) < 2.0 {
-                self.move_pos = self.path.pop_front().unwrap_or(Vec2::ZERO);
+                self.move_pos = self.path.pop_front().unwrap_or(new_pos);
+                self.move_pos = self.move_pos.round();
             }
 
             let mut velocity = (self.move_pos - self.pos).normalize_or_zero();
 
-            const SPEED: f32 = 80.0;
-
-            let mut new_pos = self.pos + velocity * SPEED * get_frame_time();
+            let mut new_pos = self.pos + velocity * self.speed * get_frame_time();
 
             if velocity.x <= 0.0 {
                 if get_tile(new_pos.x - 15.0, self.pos.y, tiles) {

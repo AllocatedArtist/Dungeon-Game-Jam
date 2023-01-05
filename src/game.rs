@@ -18,7 +18,7 @@ pub struct Game {
     enemy_sprite_a: Texture2D,
     level_atlas: Texture2D,
     editor: TileMapEditor,
-    debug_path: VecDeque<Vec2>,
+    _debug_path: VecDeque<Vec2>,
 }
 
 impl Game {
@@ -62,7 +62,7 @@ impl Game {
             level_atlas,
             game_camera: player_cam,
             editor,
-            debug_path: VecDeque::new(),
+            _debug_path: VecDeque::new(),
         }
     }
 
@@ -76,7 +76,7 @@ impl Game {
 
             self.enemies.clear();
             self.player.spawn_player(&self.editor.tiles);
-            spawn_enemy(&self.editor.tiles, &mut self.enemies, self.player.pos(), 1);
+            spawn_enemy(&self.editor.tiles, &mut self.enemies, self.player.pos(), 5);
         }
     }
 
@@ -116,15 +116,30 @@ impl Game {
                     self.debug_collision,
                 );
 
-                for grid in self.debug_path.iter() {
-                    draw_rectangle(grid.x, grid.y, 32.0, 32.0, YELLOW);
+                for enemy in self.enemies.iter_mut() {
+                    if enemy.pos().distance(self.player.pos()) < 60.0 {
+                        enemy.set_player_spotted(true);
+                    }
+
+                    if enemy.player_spotted() {
+                        enemy.move_to(self.player.pos(), &self.editor.tiles);
+                    }
+
+                    enemy.draw(self.enemy_sprite_a);
                 }
 
-                for enemy in self.enemies.iter_mut() {
-                    self.debug_path = enemy.path();
+                let enemy_count = self.enemies.len();
+                let enemy_list_cloned = self.enemies.clone().to_owned();
+                let mut enemies = self.enemies.iter_mut();
 
-                    enemy.move_to(self.player.pos(), &self.editor.tiles);
-                    enemy.draw(self.enemy_sprite_a);
+                for i in 0..enemy_count {
+                    if let Some(enemy) = enemies.next() {
+                        for (index, enemy2) in enemy_list_cloned.iter().enumerate() {
+                            if i != index {
+                                enemy.displace(enemy2);
+                            }
+                        }
+                    }
                 }
 
                 self.player.draw();
