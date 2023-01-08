@@ -11,6 +11,7 @@ pub enum GameState {
 
 pub struct Game {
     game_state: GameState,
+    current_level: i32,
     game_camera: Camera2D,
     player_sword_sprite: Texture2D,
     debug_collision: bool,
@@ -70,6 +71,7 @@ impl Game {
         let player_cam = Camera2D::from_display_rect(Rect::new(0.0, 0.0, 600.0, 600.0));
 
         Game {
+            current_level: 0,
             player_sword_sprite,
             game_state: GameState::EditorMode,
             debug_collision: true,
@@ -93,6 +95,8 @@ impl Game {
             }
 
             self.enemies.clear();
+
+            self.player.reset();
             self.player.spawn_player(&self.editor.tiles);
             spawn_enemy(&self.editor.tiles, &mut self.enemies, self.player.pos(), 5);
         }

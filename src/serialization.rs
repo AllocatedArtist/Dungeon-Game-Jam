@@ -99,7 +99,7 @@ impl Serialize for Tile {
 pub fn save(tiles: &Vec<Tile>, path: &str) -> JsonResult<()> {
     let j = serde_json::to_string_pretty(tiles)?;
 
-    let extended_path = format!("{}.json", path);
+    let extended_path = format!("res/levels/{}.json", path);
 
     let mut output = File::create(extended_path).unwrap();
     write!(output, "{}", j).unwrap();

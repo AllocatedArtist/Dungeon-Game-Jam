@@ -31,6 +31,18 @@ impl Player {
         self.health = health;
     }
 
+    pub fn reset(&mut self) {
+        self.attack_anim_start = false;
+        self.can_attack = true;
+        self.block_timer = 0.0;
+        self.block = false;
+        self.sword_pos = Vec2::ZERO;
+        self.strike_pos = Vec2::ZERO;
+        self.damage_timer = 0.0;
+        self.invulnerable = false;
+        self.health = 3;
+    }
+
     pub fn new(x: f32, y: f32, w: f32, h: f32, speed: f32) -> Player {
         Player {
             attack_anim_start: false,
