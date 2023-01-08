@@ -1,19 +1,34 @@
+use crate::player::*;
 use crate::tile::*;
+
 use macroquad::prelude::*;
 
 use std::collections::VecDeque;
 
 #[derive(Clone)]
 pub struct Enemy {
+    attack_timer: f32,
+    invulnerable: bool,
+    health: i32,
+    idle: bool,
+    is_attacking: bool,
+    attack_anim_start: bool,
+    health_timer: f32,
     speed: f32,
+    attack_spot: Vec2,
     player_spotted: bool,
     move_pos: Vec2,
     prev_goal: Vec2,
     path: VecDeque<Vec2>,
+    sword_pos: Vec2,
     pos: Vec2,
 }
 
 impl Enemy {
+    pub fn health(&self) -> i32 {
+        self.health
+    }
+
     pub fn set_pos(&mut self, pos: Vec2) {
         self.pos = pos;
     }
@@ -32,7 +47,16 @@ impl Enemy {
 
     pub fn new(pos: Vec2) -> Enemy {
         Enemy {
-            speed: rand::gen_range(80.0, 105.0),
+            health_timer: 0.0,
+            health: 3,
+            invulnerable: false,
+            idle: true,
+            attack_timer: 2.0,
+            attack_anim_start: false,
+            is_attacking: false,
+            attack_spot: Vec2::ZERO,
+            sword_pos: Vec2::ZERO,
+            speed: rand::gen_range(90.0, 105.0),
             player_spotted: false,
             move_pos: Vec2::ZERO,
             pos,
@@ -45,17 +69,142 @@ impl Enemy {
         self.pos
     }
 
-    pub fn draw(&self, texture: Texture2D) {
-        draw_texture_ex(
-            texture,
-            self.pos.x,
-            self.pos.y,
-            WHITE,
-            DrawTextureParams {
-                dest_size: Some(vec2(32.0, 32.0)),
-                ..Default::default()
-            },
-        );
+    pub fn draw(&mut self, texture: Texture2D) {
+        if !self.invulnerable {
+            draw_texture_ex(
+                texture,
+                self.pos.x,
+                self.pos.y,
+                WHITE,
+                DrawTextureParams {
+                    dest_size: Some(vec2(32.0, 32.0)),
+                    ..Default::default()
+                },
+            );
+        } else {
+            self.health_timer += get_frame_time();
+            if self.health_timer > 1.5 {
+                self.health_timer = 0.0;
+                self.invulnerable = false;
+            }
+
+            draw_texture_ex(
+                texture,
+                self.pos.x,
+                self.pos.y,
+                RED,
+                DrawTextureParams {
+                    dest_size: Some(vec2(32.0, 32.0)),
+                    ..Default::default()
+                },
+            );
+        }
+    }
+
+    pub fn damage_player(&self, player: &mut Player) {
+        if self.sword_pos.distance(player.pos()) < 19.0 && !self.idle {
+            player.take_damage();
+        }
+    }
+
+    pub fn take_damage(&mut self) {
+        if !self.invulnerable {
+            self.health -= 1;
+            self.health = self.health.max(0);
+
+            self.idle = true;
+            self.invulnerable = true;
+        }
+    }
+
+    pub fn draw_weapon(&mut self, texture: Texture2D, player_pos: Vec2) {
+        if self.player_spotted {
+            let dir = (player_pos - self.pos).normalize_or_zero();
+
+            let angle = player_pos.angle_between(self.sword_pos);
+
+            let flip_y = player_pos.y > self.pos.y;
+
+            if self.pos.distance(player_pos) < 50.0 && !self.idle {
+                if !self.is_attacking {
+                    self.is_attacking = true;
+                    self.attack_spot = self.sword_pos + dir * 40.0;
+                }
+
+                if self.sword_pos.distance(self.attack_spot) > 5.0
+                    && self.attack_anim_start == false
+                    && self.is_attacking
+                {
+                    self.sword_pos = self.sword_pos.lerp(self.attack_spot, 0.06);
+                } else {
+                    self.attack_anim_start = true;
+                    self.sword_pos = self.sword_pos.lerp(self.pos + dir * 20.0, 0.1);
+                    if self.sword_pos.distance(self.pos + dir * 20.0) > 5.0 {
+                        self.attack_anim_start = false;
+                        self.is_attacking = false;
+                        self.idle = true;
+                    }
+                }
+
+                if self.sword_pos.distance(self.pos) > 50.0 {
+                    self.is_attacking = false;
+                    self.attack_anim_start = false;
+                    self.sword_pos = self.pos + dir * 20.0;
+                    self.idle = true;
+                }
+            } else {
+                if self.idle {
+                    self.attack_timer += get_frame_time();
+                    if self.attack_timer > 2.5 {
+                        self.attack_timer = 0.0;
+                        self.idle = false;
+                    }
+                }
+                self.is_attacking = false;
+                self.sword_pos = self.pos + dir * 20.0;
+            }
+
+            if !self.idle {
+                draw_texture_ex(
+                    texture,
+                    self.sword_pos.x,
+                    self.sword_pos.y,
+                    WHITE,
+                    DrawTextureParams {
+                        dest_size: Some(vec2(32.0, 32.0)),
+                        rotation: angle,
+                        pivot: Some(self.sword_pos),
+                        flip_y,
+                        ..Default::default()
+                    },
+                );
+            } else {
+                draw_texture_ex(
+                    texture,
+                    self.sword_pos.x,
+                    self.sword_pos.y,
+                    RED,
+                    DrawTextureParams {
+                        dest_size: Some(vec2(32.0, 32.0)),
+                        rotation: angle,
+                        pivot: Some(self.sword_pos),
+                        flip_y,
+                        ..Default::default()
+                    },
+                );
+            }
+        } else {
+            draw_texture_ex(
+                texture,
+                self.pos.x - 12.0,
+                self.pos.y,
+                WHITE,
+                DrawTextureParams {
+                    dest_size: Some(vec2(32.0, 32.0)),
+                    ..Default::default()
+                },
+            );
+        }
     }
 
     pub fn displace(&mut self, other: &Enemy) {

@@ -12,9 +12,11 @@ pub enum GameState {
 pub struct Game {
     game_state: GameState,
     game_camera: Camera2D,
+    player_sword_sprite: Texture2D,
     debug_collision: bool,
     enemies: Vec<Enemy>,
     player: Player,
+    enemy_sword_sprite: Texture2D,
     enemy_sprite_a: Texture2D,
     level_atlas: Texture2D,
     editor: TileMapEditor,
@@ -48,17 +50,33 @@ impl Game {
                 process::exit(1);
             });
 
+        let enemy_sword_sprite = create_texture("res/textures/enemy_sword.png")
+            .await
+            .unwrap_or_else(|err| {
+                println!("{err}");
+                process::exit(1);
+            });
+
+        let player_sword_sprite = create_texture("res/textures/player_sword.png")
+            .await
+            .unwrap_or_else(|err| {
+                println!("{err}");
+                process::exit(1);
+            });
+
         let mut editor = TileMapEditor::new(0.0, 0.0, 1.0, 1.0, 16.0, (10, 10), (1.0, 1.0));
         editor.set_texture(level_atlas.clone());
 
         let player_cam = Camera2D::from_display_rect(Rect::new(0.0, 0.0, 600.0, 600.0));
 
         Game {
+            player_sword_sprite,
             game_state: GameState::EditorMode,
             debug_collision: true,
             enemies: Vec::new(),
             player,
             enemy_sprite_a,
+            enemy_sword_sprite,
             level_atlas,
             game_camera: player_cam,
             editor,
@@ -106,6 +124,11 @@ impl Game {
                 self.editor.show_editors();
             }
             GameState::Play => {
+                if self.player.health() <= 0 {
+                    self.player.set_health(3);
+                    self.game_state = GameState::EditorMode;
+                }
+
                 self.game_camera.target = self.game_camera.target.lerp(self.player.pos(), 0.1);
                 self.game_camera.target = self.game_camera.target.round();
                 set_camera(&self.game_camera);
@@ -123,9 +146,18 @@ impl Game {
 
                     if enemy.player_spotted() {
                         enemy.move_to(self.player.pos(), &self.editor.tiles);
+                        enemy.damage_player(&mut self.player);
                     }
 
                     enemy.draw(self.enemy_sprite_a);
+                    enemy.draw_weapon(self.enemy_sword_sprite, self.player.pos());
+                }
+
+                let enemy_list_cloned = self.enemies.clone().to_owned();
+                for (index, enemy) in enemy_list_cloned.iter().enumerate() {
+                    if enemy.health() <= 0 {
+                        self.enemies.remove(index);
+                    }
                 }
 
                 let enemy_count = self.enemies.len();
@@ -143,6 +175,10 @@ impl Game {
                 }
 
                 self.player.draw();
+                self.player
+                    .draw_weapon(self.player_sword_sprite, self.game_camera);
+                self.player.attack(&mut self.enemies, self.game_camera);
+                self.player.draw_hearts();
                 self.player.move_player(&self.editor.tiles);
             }
         }
